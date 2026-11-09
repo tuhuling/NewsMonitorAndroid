@@ -126,7 +126,7 @@ class MonitorFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             val keywordCount = withContext(Dispatchers.IO) { db.keywordDao().count() }
             if (keywordCount == 0) {
-                toast("请先导入关键词")
+                context?.toast("请先导入关键词")
                 return@launch
             }
 
@@ -213,7 +213,7 @@ class MonitorFragment : Fragment() {
             .setPositiveButton(R.string.delete) { _, _ ->
                 viewLifecycleOwner.lifecycleScope.launch {
                     withContext(Dispatchers.IO) { db.logDao().clear() }
-                    toast("日志已清空")
+                    context?.toast("日志已清空")
                 }
             }
             .show()
@@ -226,13 +226,13 @@ class MonitorFragment : Fragment() {
                 AppDatabase.get(appContext).logDao().getAll()
             }
             if (logs.isEmpty()) {
-                toast("暂无日志")
+                context?.toast("暂无日志")
                 return@launch
             }
             val file = withContext(Dispatchers.IO) {
                 ExportUtils.exportLogsTxt(appContext, logs)
             }
-            toast("已导出: ${file.absolutePath}")
+            context?.toast("已导出: ${file.absolutePath}")
         }
     }
 

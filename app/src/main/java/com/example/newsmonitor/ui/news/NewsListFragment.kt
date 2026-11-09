@@ -244,7 +244,7 @@ class NewsListFragment : Fragment() {
                     withContext(Dispatchers.IO) { db.newsDao().deleteByIds(ids) }
                     adapter.clearSelection()
                     updateSelectionBar()
-                    toast("已删除 ${ids.size} 条新闻")
+                    context?.toast("已删除 ${ids.size} 条新闻")
                 }
             }
             .show()
@@ -258,13 +258,13 @@ class NewsListFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             val news = withContext(Dispatchers.IO) { db.newsDao().getByIds(ids) }
             if (news.isEmpty()) {
-                toast("没有可导出的新闻")
+                context?.toast("没有可导出的新闻")
                 return@launch
             }
             val file = withContext(Dispatchers.IO) {
                 ExportUtils.exportNewsCsv(appContext, news)
             }
-            toast("已导出: ${file.absolutePath}")
+            context?.toast("已导出: ${file.absolutePath}")
         }
     }
 

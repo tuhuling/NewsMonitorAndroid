@@ -114,7 +114,7 @@ class KeywordFragment : Fragment() {
                         }
                         dialog.dismiss()
                     } catch (e: Exception) {
-                        toast(
+                        context?.toast(
                             if (isUniqueConstraint(e)) {
                                 "该关键词已存在"
                             } else {
@@ -136,7 +136,7 @@ class KeywordFragment : Fragment() {
             .setPositiveButton(R.string.delete) { _, _ ->
                 viewLifecycleOwner.lifecycleScope.launch {
                     withContext(Dispatchers.IO) { db.keywordDao().deleteById(keyword.id) }
-                    toast("已删除关键词")
+                    context?.toast("已删除关键词")
                 }
             }
             .show()
@@ -155,7 +155,7 @@ class KeywordFragment : Fragment() {
                     withContext(Dispatchers.IO) { db.keywordDao().deleteByIds(ids) }
                     adapter.clearSelection()
                     updateSelectionUi()
-                    toast("已删除 ${ids.size} 个关键词")
+                    context?.toast("已删除 ${ids.size} 个关键词")
                 }
             }
             .show()

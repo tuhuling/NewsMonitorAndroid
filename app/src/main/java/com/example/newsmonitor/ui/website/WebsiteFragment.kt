@@ -156,7 +156,7 @@ class WebsiteFragment : Fragment() {
                         }
                         dialog.dismiss()
                     } catch (e: Exception) {
-                        toast(
+                        context?.toast(
                             if (isUniqueConstraint(e)) {
                                 "该 URL 已存在"
                             } else {
@@ -178,7 +178,7 @@ class WebsiteFragment : Fragment() {
             .setPositiveButton(R.string.delete) { _, _ ->
                 viewLifecycleOwner.lifecycleScope.launch {
                     withContext(Dispatchers.IO) { db.websiteDao().deleteById(website.id) }
-                    toast("已删除网站源，新闻保留")
+                    context?.toast("已删除网站源，新闻保留")
                 }
             }
             .show()
@@ -197,7 +197,7 @@ class WebsiteFragment : Fragment() {
                     withContext(Dispatchers.IO) { db.websiteDao().deleteByIds(ids) }
                     adapter.clearSelection()
                     updateSelectionUi()
-                    toast("已删除 ${ids.size} 个网站源，新闻保留")
+                    context?.toast("已删除 ${ids.size} 个网站源，新闻保留")
                 }
             }
             .show()
@@ -217,7 +217,7 @@ class WebsiteFragment : Fragment() {
 
         dialogBinding.btnCopyPrompt.setOnClickListener {
             requireContext().copyPlainText("website_prompt", prompt)
-            toast("已复制")
+            context?.toast("已复制")
         }
         dialog.show()
     }
@@ -225,7 +225,7 @@ class WebsiteFragment : Fragment() {
     private fun importFile(uri: Uri) {
         if (importing) return
         importing = true
-        toast("正在导入，请稍候…")
+        context?.toast("正在导入，请稍候…")
 
         val appContext = requireContext().applicationContext
         viewLifecycleOwner.lifecycleScope.launch {
@@ -234,7 +234,7 @@ class WebsiteFragment : Fragment() {
             }
             if (text == null) {
                 importing = false
-                toast("读取文件失败")
+                context?.toast("读取文件失败")
                 return@launch
             }
 

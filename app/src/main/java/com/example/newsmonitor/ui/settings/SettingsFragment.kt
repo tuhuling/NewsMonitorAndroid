@@ -81,7 +81,7 @@ class SettingsFragment : Fragment() {
                     db.configDao().put(ConfigEntry(key, value))
                 }
             }
-            toast("保存成功")
+            context?.toast("保存成功")
         }
     }
 
