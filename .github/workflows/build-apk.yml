@@ -29,12 +29,70 @@ jobs:
         with:
           gradle-version: '8.5'
 
+      # 用 tee 保留完整日志；set -o pipefail 保证构建失败时该步骤也失败。
       - name: Build debug APK
-        run: gradle :app:assembleDebug --no-daemon --stacktrace
+        shell: bash
+        run: |
+          set -o pipefail
+          gradle :app:assembleDebug --no-daemon --stacktrace 2>&1 | tee gradle-build.log
+
+      # 无论成功失败都上传日志，失败时可直接下载查看真正报错。
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-build-log
+          path: gradle-build.log
+          if-no-files-found: warn
 
       - name: Upload APK artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: NewsMonitor-debug-apk
           path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+  # 单独的任务：在云端生成缺失的 Gradle Wrapper 文件并打包成 zip。
+  # 下载解压到项目根目录后，本地就有了 gradlew / gradlew.bat / gradle-wrapper.jar。
+  gradle-wrapper:
+    name: Generate Gradle wrapper
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle 8.5
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.5'
+
+      - name: Generate wrapper in an empty directory
+        shell: bash
+        run: |
+          mkdir -p wrapper-tmp
+          cd wrapper-tmp
+          echo 'rootProject.name = "wrapper-gen"' > settings.gradle.kts
+          gradle wrapper --gradle-version 8.5 --distribution-type bin --no-daemon
+
+      - name: Package wrapper files
+        shell: bash
+        run: |
+          mkdir -p gradle-wrapper-out/gradle/wrapper
+          cp wrapper-tmp/gradlew gradle-wrapper-out/
+          cp wrapper-tmp/gradlew.bat gradle-wrapper-out/
+          cp wrapper-tmp/gradle/wrapper/gradle-wrapper.jar gradle-wrapper-out/gradle/wrapper/
+          cp wrapper-tmp/gradle/wrapper/gradle-wrapper.properties gradle-wrapper-out/gradle/wrapper/
+          cd gradle-wrapper-out
+          zip -r ../gradle-wrapper.zip .
+
+      - name: Upload wrapper artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-wrapper
+          path: gradle-wrapper.zip
           if-no-files-found: error

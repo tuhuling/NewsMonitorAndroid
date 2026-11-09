@@ -27,6 +27,12 @@
 （以及 `gradlew` / `gradlew.bat`）。这**不影响云端打包**：下面的 GitHub Actions
 工作流直接安装 Gradle 8.5 来构建，不依赖 `./gradlew`。
 
+工作流里还带了一个 **Generate Gradle wrapper** 任务：运行后可以从 Artifacts
+下载 `gradle-wrapper.zip`，解压到项目根目录即可补齐本地 Wrapper 文件。
+
+Room 注解处理使用 **kapt**（不是 KSP），避免 KSP 版本必须与 Kotlin 版本严格配对
+造成的云端构建失败。
+
 ---
 
 ## 二、推荐方案：用 GitHub Actions 云端打包（电脑无需安装 Android Studio）
@@ -92,6 +98,13 @@ Android SDK，编译出 APK，然后你把 APK 下载到红米手机安装。
 2. 页面底部 `Artifacts` 区域，点击 `NewsMonitor-debug-apk` 下载 zip。
 3. 解压 zip，得到 `app-debug.apk`。
 
+同一次运行还会产生两个辅助 Artifacts：
+
+- `gradle-build-log`：完整构建日志。**如果构建失败，先下载它**，搜索 `FAILURE`
+  或 `e:` 开头的行，就能定位真正的编译错误。
+- `gradle-wrapper`（来自“Generate Gradle wrapper”任务）：Gradle Wrapper 文件包，
+  解压到项目根目录即可补齐 `gradlew` / `gradlew.bat` / `gradle-wrapper.jar`。
+
 说明：这是 **debug APK**，使用 Android 调试签名，**可以直接安装使用**，
 但不要用于上架应用商店。后续如需正式 release 签名版，见第六节。
 
@@ -134,13 +147,21 @@ APP 内首次使用顺序：
 
 ## 四、GitHub Actions 工作流说明
 
-`.github/workflows/build-apk.yml` 做了以下事情：
+`.github/workflows/build-apk.yml` 包含两个任务：
+
+**任务一：Build debug APK**
 
 1. 检出仓库代码；
 2. 安装 JDK 17（AGP 8.3.2 要求）；
 3. 安装 Gradle 8.5（不依赖仓库里的 gradle-wrapper.jar）；
-4. 执行 `gradle :app:assembleDebug`；
-5. 把 `app/build/outputs/apk/debug/*.apk` 上传为可下载的 Artifact。
+4. 执行 `gradle :app:assembleDebug`，并用 `tee` 把完整日志写入 `gradle-build.log`；
+5. 无论成功还是失败，都把 `gradle-build.log` 上传为 `gradle-build-log` Artifact；
+6. 成功时把 `app/build/outputs/apk/debug/*.apk` 上传为 `NewsMonitor-debug-apk`。
+
+**任务二：Generate Gradle wrapper**
+
+在云端空目录执行 `gradle wrapper --gradle-version 8.5`，把生成的文件打成
+`gradle-wrapper.zip` 供下载，用于补齐本地缺失的 Wrapper。
 
 首次构建需要下载 Gradle 与 Android 依赖，时间较长属于正常。
 之后有缓存会快很多。
@@ -149,31 +170,43 @@ APP 内首次使用顺序：
 
 ## 五、常见问题
 
-**Q1：Actions 构建失败，提示找不到 Android SDK？**
-GitHub 的 `ubuntu-latest` 运行器自带 Android SDK 与 34 平台，正常不会缺。
-请先确认仓库根目录结构正确（根目录有 `app/` 和 `settings.gradle.kts`）。
-仍然失败时点开失败步骤，把报错行发出来再排查。
+**Q1：Actions 构建失败，怎么看到真正的报错？**
+在失败的那次运行页面底部下载 `gradle-build-log` Artifact，解压后用文本编辑器打开
+`gradle-build.log`，搜索：
 
-**Q2：APK 下载后安装失败 / “应用未安装”？**
+- `FAILURE: Build failed`：失败总原因；
+- `e: file:///...`：Kotlin 编译错误（行号就在后面）；
+- `error:` 或 `AAPT2`：资源 / XML 错误；
+- `Unresolved reference`：缺少 import 或依赖；
+- `Could not resolve` / `Could not GET`：依赖下载失败（重跑通常能解决）。
+
+另外请先确认仓库根目录结构正确：根目录必须直接有 `app/`、`settings.gradle.kts`、
+`build.gradle.kts`。如果变成了 `NewsMonitorAndroid/app/...` 多一层，任务会找不到 `:app`。
+
+**Q2：构建失败，提示找不到 Android SDK？**
+GitHub 的 `ubuntu-latest` 运行器自带 Android SDK 与 34 平台，正常不会缺；
+若依赖下载超时，重新运行一次即可。
+
+**Q3：APK 下载后安装失败 / “应用未安装”？**
 - 先卸载手机上旧版本（签名不同会冲突）；
 - 确认手机剩余空间充足；
 - 确认 APK 完整（zip 解压后再传，不要直接安装 zip）。
 
-**Q3：开始监测后没有通知？**
+**Q4：开始监测后没有通知？**
 - 检查通知权限是否允许；
 - 检查通知渠道“外媒监测”是否被关闭；
 - 检查省电策略是否为“无限制”。
 
-**Q4：监测一段时间后被停止？**
+**Q5：监测一段时间后被停止？**
 - 锁屏 / 切后台被杀属于正常现象（需求明确不做保活）；
 - Android 14+ 前台服务单次运行有约 6 小时上限，超时被系统停止属正常；
 - 保持亮屏、省电无限制、自启动允许可以显著提升稳定性。
 
-**Q5：翻译失败会不会丢新闻？**
+**Q6：翻译失败会不会丢新闻？**
 不会。关键词命中即入库；翻译失败时列表显示原文并带“原文”角标，
 详情页显示“本条翻译失败，以下为原文内容”，复制内容也复制原文。
 
-**Q6：GitHub Actions 构建的是 debug 还是 release？**
+**Q7：GitHub Actions 构建的是 debug 还是 release？**
 当前是 debug 版，可直接安装。需要正式 release 版时见下一节。
 
 ---
@@ -183,7 +216,9 @@ GitHub 的 `ubuntu-latest` 运行器自带 Android SDK 与 34 平台，正常不
 1. 安装 Android Studio（Hedgehog 或更新版本均可）。
 2. `Open` 选择 `E:\05，py---py\25\NewsMonitorAndroid`。
 3. Android Studio 会创建 `local.properties`（SDK 路径）并提示补全 Gradle Wrapper：
-   - 最简单方法：新建一个空项目，把它的 `gradlew`、`gradlew.bat`、
+   - **推荐**：在 GitHub Actions 里运行 `Generate Gradle wrapper` 任务，
+     下载 `gradle-wrapper.zip`，解压到项目根目录；
+   - 或新建一个空项目，把它的 `gradlew`、`gradlew.bat`、
      `gradle/wrapper/gradle-wrapper.jar` 复制到本项目对应位置；
    - 或点击 IDE 提示的 Gradle Sync 相关修复。
 4. 等待 Gradle Sync 完成（会自动下载 SDK 34、依赖）。
@@ -202,7 +237,7 @@ NewsMonitorAndroid/
 ├── .github/workflows/build-apk.yml     # GitHub Actions 云端打包工作流
 ├── README.md                           # 本文件
 ├── .gitignore
-├── build.gradle.kts                    # 根构建脚本（AGP 8.3.2 / Kotlin 1.9.24 / KSP）
+├── build.gradle.kts                    # 根构建脚本（AGP 8.3.2 / Kotlin 1.9.24 / kapt）
 ├── settings.gradle.kts
 ├── gradle.properties
 ├── gradle/wrapper/gradle-wrapper.properties

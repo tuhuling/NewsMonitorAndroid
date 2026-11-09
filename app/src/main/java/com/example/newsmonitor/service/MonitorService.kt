@@ -78,12 +78,13 @@ class MonitorService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         // 系统重建 Service 时 intent 可能为 null：不要启动一条没有通知的“幽灵”巡查，
         // 直接收尾退出，等用户下次手动开始。
-        if (intent?.action == null) {
+        val action = intent?.action
+        if (action == null) {
             finishMonitoring()
             return START_NOT_STICKY
         }
 
-        return when (intent.action) {
+        return when (action) {
             ACTION_START -> {
                 if (monitorJob?.isActive == true) return START_STICKY
                 finished = false

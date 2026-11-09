@@ -61,10 +61,10 @@ class NewsFetcher(
     private suspend fun fetchDetail(title: String, url: String): FetchedNews? {
         val document = fetchPage(url, "详情") ?: return null
         val rawTime = extractPublishTime(document)
-        var content = extractContent(document)
-        if (content.isNullOrBlank() || content.length < 50) {
-            content = title
-        }
+        val extracted = extractContent(document)
+        // 正文缺失或过短时用标题兜底；显式写成非空 String，避免可空类型推断问题。
+        val content: String =
+            if (extracted.isNullOrBlank() || extracted.length < 50) title else extracted
         return FetchedNews(
             title = title,
             url = url,
@@ -159,7 +159,7 @@ class NewsFetcher(
             .map { it.text().trim() }
             .filter { it.length > 20 }
             .joinToString(" ")
-        return paragraphs.ifBlank { null }
+        return if (paragraphs.isBlank()) null else paragraphs
     }
 
     companion object {
