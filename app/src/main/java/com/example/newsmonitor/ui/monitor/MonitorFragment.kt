@@ -16,10 +16,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.example.newsmonitor.R
 import com.example.newsmonitor.data.AppDatabase
-import com.example.newsmonitor.data.ConfigEntry
-import com.example.newsmonitor.data.ConfigKeys
 import com.example.newsmonitor.data.ConfigRepository
 import com.example.newsmonitor.data.LogEntry
 import com.example.newsmonitor.databinding.FragmentMonitorBinding
@@ -44,6 +43,9 @@ class MonitorFragment : Fragment() {
 
     private lateinit var logAdapter: LogAdapter
     private var pendingStart = false
+
+    /** 用户手动上滑查看历史日志时为 true，滑回列表底部后恢复自动滚动。 */
+    private var userPausedAutoScroll = false
 
     private val notificationPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -71,18 +73,29 @@ class MonitorFragment : Fragment() {
         logAdapter = LogAdapter()
         binding.rvLogs.layoutManager = LinearLayoutManager(requireContext())
         binding.rvLogs.adapter = logAdapter
+        binding.rvLogs.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+                when (newState) {
+                    RecyclerView.SCROLL_STATE_DRAGGING -> userPausedAutoScroll = true
+                    RecyclerView.SCROLL_STATE_IDLE -> {
+                        if (!recyclerView.canScrollVertically(1)) {
+                            userPausedAutoScroll = false
+                        }
+                    }
+                }
+            }
+
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                if (!recyclerView.canScrollVertically(1)) {
+                    userPausedAutoScroll = false
+                }
+            }
+        })
 
         binding.btnStart.setOnClickListener { startMonitoring() }
         binding.btnStop.setOnClickListener { stopMonitoring() }
         binding.btnClearLogs.setOnClickListener { confirmClearLogs() }
         binding.btnExportLogs.setOnClickListener { exportLogs() }
-
-        viewLifecycleOwner.lifecycleScope.launch {
-            val interval = withContext(Dispatchers.IO) {
-                ConfigRepository(db.configDao()).getPollInterval()
-            }
-            binding.etInterval.setText(interval.toString())
-        }
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -102,43 +115,55 @@ class MonitorFragment : Fragment() {
                         delay(1000)
                     }
                 }
+                // 日志不再跟随数据库 Flow 每秒刷新，改为每 15 秒主动读取一次。
                 launch {
-                    viewModel.logs.collect { logs ->
-                        logAdapter.submitList(logs)
-                        binding.tvNoLogs.isVisible = logs.isEmpty()
+                    while (isActive) {
+                        refreshLogs()
+                        delay(LOG_REFRESH_INTERVAL_MS)
                     }
                 }
             }
         }
     }
 
-    private fun startMonitoring() {
-        val minutes = binding.etInterval.text?.toString()?.trim()?.toIntOrNull()
-        if (minutes == null ||
-            minutes < ConfigKeys.MIN_POLL_INTERVAL ||
-            minutes > ConfigKeys.MAX_POLL_INTERVAL
-        ) {
-            binding.tilInterval.error = "请输入 1~1440 的整数"
-            return
+    override fun onResume() {
+        super.onResume()
+        // 从「设置」页修改轮询间隔后返回本页时，重新读取并刷新文本。
+        if (_binding != null) {
+            refreshIntervalText()
         }
-        binding.tilInterval.error = null
+    }
 
+    private fun refreshIntervalText() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val minutes = withContext(Dispatchers.IO) {
+                ConfigRepository(db.configDao()).getPollInterval()
+            }
+            if (_binding == null) return@launch
+            binding.tvInterval.text = getString(R.string.monitor_interval_info, minutes)
+        }
+    }
+
+    private suspend fun refreshLogs() {
+        val logs = withContext(Dispatchers.IO) { db.logDao().getAllAscending() }
+        if (_binding == null) return
+        binding.tvNoLogs.isVisible = logs.isEmpty()
+        logAdapter.submitList(logs) {
+            if (_binding == null || userPausedAutoScroll || logs.isEmpty()) return@submitList
+            binding.rvLogs.post {
+                if (_binding != null) {
+                    binding.rvLogs.smoothScrollToPosition(logs.lastIndex)
+                }
+            }
+        }
+    }
+
+    private fun startMonitoring() {
         viewLifecycleOwner.lifecycleScope.launch {
             val keywordCount = withContext(Dispatchers.IO) { db.keywordDao().count() }
             if (keywordCount == 0) {
                 context?.toast("请先导入关键词")
                 return@launch
-            }
-
-            withContext(Dispatchers.IO) {
-                db.configDao().put(ConfigEntry(ConfigKeys.POLL_INTERVAL, minutes.toString()))
-                db.logDao().insert(
-                    LogEntry(
-                        level = "INFO",
-                        message = "监测已启动",
-                        createdAt = TimeUtils.nowBeijingString()
-                    )
-                )
             }
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
@@ -213,6 +238,7 @@ class MonitorFragment : Fragment() {
             .setPositiveButton(R.string.delete) { _, _ ->
                 viewLifecycleOwner.lifecycleScope.launch {
                     withContext(Dispatchers.IO) { db.logDao().clear() }
+                    refreshLogs()
                     context?.toast("日志已清空")
                 }
             }
@@ -239,5 +265,9 @@ class MonitorFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
+    }
+
+    companion object {
+        private const val LOG_REFRESH_INTERVAL_MS = 15_000L
     }
 }

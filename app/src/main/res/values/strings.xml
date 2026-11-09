@@ -61,6 +61,7 @@
     <string name="stopped">○ 已停止</string>
     <string name="monitor_progress_init">本次已监测 0 / 0 站</string>
     <string name="monitor_duration_init">本次运行时长 00:00:00</string>
+    <string name="monitor_interval_info">当前轮询间隔：%1$d 分钟，可在设置中修改</string>
     <string name="clear_logs">清空日志</string>
     <string name="export_logs">导出日志</string>
     <string name="no_logs">暂无日志</string>

@@ -41,6 +41,7 @@ class WebsiteFragment : Fragment() {
     private lateinit var adapter: WebsiteAdapter
 
     private var importing = false
+    private var allWebsites: List<Website> = emptyList()
 
     private val openDocument =
         registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -73,12 +74,14 @@ class WebsiteFragment : Fragment() {
             AiRecommendDialogFragment().show(childFragmentManager, "ai_recommend")
         }
         binding.btnSourcePrompt.setOnClickListener { showSourcePrompt() }
+        binding.btnSelectAll.setOnClickListener { toggleSelectAll() }
         binding.btnBatchDelete.setOnClickListener { confirmDeleteSelected() }
         updateSelectionUi()
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 db.websiteDao().observeAll().collect { list ->
+                    allWebsites = list
                     adapter.submitList(list)
                     binding.tvEmpty.isVisible = list.isEmpty()
                     binding.tvCount.text = "共 ${list.size} 个网站源"
@@ -90,13 +93,28 @@ class WebsiteFragment : Fragment() {
 
     private fun updateSelectionUi() {
         if (_binding == null) return
-        val count = adapter.selectedIds().size
-        binding.btnBatchDelete.isEnabled = count > 0
-        binding.btnBatchDelete.text = if (count > 0) {
-            "批量删除($count)"
+        val selected = adapter.selectedIds()
+        val allSelected = allWebsites.isNotEmpty() && allWebsites.all { it.id in selected }
+        binding.btnBatchDelete.isEnabled = selected.isNotEmpty()
+        binding.btnBatchDelete.text = if (selected.isNotEmpty()) {
+            "批量删除(${selected.size})"
         } else {
             getString(R.string.batch_delete)
         }
+        binding.btnSelectAll.text = getString(
+            if (allSelected) R.string.unselect_all else R.string.select_all
+        )
+    }
+
+    private fun toggleSelectAll() {
+        val selected = adapter.selectedIds()
+        val allSelected = allWebsites.isNotEmpty() && allWebsites.all { it.id in selected }
+        if (allSelected) {
+            adapter.clearSelection()
+        } else {
+            adapter.selectAll(allWebsites)
+        }
+        updateSelectionUi()
     }
 
     private fun showEditDialog(website: Website?) {

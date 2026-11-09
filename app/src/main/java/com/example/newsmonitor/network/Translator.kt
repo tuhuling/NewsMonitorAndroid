@@ -18,6 +18,8 @@ object Translator {
 
     private const val ENDPOINT = "https://translate.googleapis.com/translate_a/single"
     private const val CACHE_SIZE = 1000
+    private const val MAX_QUERY_LENGTH = 1000
+    private const val SMART_CUT_MIN = 900
 
     private val chinesePattern = Regex("[\\u4e00-\\u9fa5]")
     private val cache = LruCache<Int, String>(CACHE_SIZE)
@@ -32,7 +34,8 @@ object Translator {
 
         if (chinesePattern.containsMatchIn(text)) return@withContext text
 
-        val key = text.take(200).hashCode()
+        val query = truncateForTranslation(text)
+        val key = query.hashCode()
         val cached = synchronized(cache) { cache.get(key) }
         if (cached != null) return@withContext cached
 
@@ -42,7 +45,7 @@ object Translator {
                 .addQueryParameter("sl", "auto")
                 .addQueryParameter("tl", "zh-CN")
                 .addQueryParameter("dt", "t")
-                .addQueryParameter("q", text.take(500))
+                .addQueryParameter("q", query)
                 .build()
 
             val request = Request.Builder()
@@ -77,5 +80,21 @@ object Translator {
         } catch (_: Exception) {
             null
         }
+    }
+
+    /**
+     * 翻译前截断：最多 1000 个字符。
+     * 超长时在 900~1000 字符之间回退到最近的句号/问号/感叹号/换行，
+     * 保证最后一句完整，译文大约能到四五百个汉字。
+     */
+    private fun truncateForTranslation(text: String): String {
+        if (text.length <= MAX_QUERY_LENGTH) return text
+        val head = text.substring(0, MAX_QUERY_LENGTH)
+        for (index in head.lastIndex downTo SMART_CUT_MIN) {
+            when (head[index]) {
+                '.', '!', '?', '\n', '。' -> return head.substring(0, index + 1).trimEnd()
+            }
+        }
+        return head
     }
 }

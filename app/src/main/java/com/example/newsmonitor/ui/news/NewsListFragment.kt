@@ -34,7 +34,7 @@ class NewsListFragment : Fragment() {
     private val db by lazy { AppDatabase.get(requireContext().applicationContext) }
     private lateinit var adapter: NewsAdapter
 
-    private val timeFilter = MutableStateFlow<TimeFilter>(TimeFilter.Days(7))
+    private val timeFilter = MutableStateFlow<TimeFilter>(TimeFilter.Days(3))
     private val sourceFilter = MutableStateFlow<String?>(null)
     private val keywordFilter = MutableStateFlow<String?>(null)
 
@@ -63,7 +63,7 @@ class NewsListFragment : Fragment() {
         binding.rvNews.layoutManager = LinearLayoutManager(requireContext())
         binding.rvNews.adapter = adapter
 
-        binding.chipLast7.isChecked = true
+        binding.chipLast3.isChecked = true
         binding.timeChipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
             if (checkedIds.size != 1) return@setOnCheckedStateChangeListener
             val filter = when (checkedIds[0]) {

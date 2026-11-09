@@ -58,6 +58,12 @@ class WebsiteAdapter(
         notifyItemRangeChanged(0, itemCount)
     }
 
+    fun selectAll(items: List<Website>) {
+        selectedIds.clear()
+        items.forEach { selectedIds.add(it.id) }
+        notifyItemRangeChanged(0, itemCount)
+    }
+
     private object Diff : DiffUtil.ItemCallback<Website>() {
         override fun areItemsTheSame(oldItem: Website, newItem: Website): Boolean =
             oldItem.id == newItem.id

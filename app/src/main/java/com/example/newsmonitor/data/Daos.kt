@@ -108,6 +108,9 @@ interface LogDao {
     @Query("SELECT * FROM logs ORDER BY id DESC")
     suspend fun getAll(): List<LogEntry>
 
+    @Query("SELECT * FROM logs ORDER BY id ASC")
+    suspend fun getAllAscending(): List<LogEntry>
+
     @Query("DELETE FROM logs")
     suspend fun clear()
 
