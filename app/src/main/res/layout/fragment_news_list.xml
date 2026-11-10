@@ -6,63 +6,27 @@
     android:orientation="vertical">
 
     <com.google.android.material.chip.ChipGroup
-        android:id="@+id/timeChipGroup"
+        android:id="@+id/actionChipGroup"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:paddingStart="8dp"
         android:paddingTop="4dp"
         android:paddingEnd="8dp"
-        app:chipSpacingHorizontal="2dp"
-        app:chipSpacingVertical="0dp"
-        app:selectionRequired="false"
-        app:singleSelection="true">
-
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipAll"
-            style="@style/Widget.Material3.Chip.Filter"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/filter_all" />
-
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipToday"
-            style="@style/Widget.Material3.Chip.Filter"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/filter_today" />
-
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipLast3"
-            style="@style/Widget.Material3.Chip.Filter"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:checked="true"
-            android:text="@string/filter_3days" />
-
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipLast7"
-            style="@style/Widget.Material3.Chip.Filter"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/filter_7days" />
-
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipLast30"
-            style="@style/Widget.Material3.Chip.Filter"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/filter_30days" />
-    </com.google.android.material.chip.ChipGroup>
-
-    <com.google.android.material.chip.ChipGroup
-        android:id="@+id/actionChipGroup"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingStart="8dp"
-        android:paddingEnd="8dp"
         android:paddingBottom="4dp"
         app:chipSpacingHorizontal="4dp"
         app:chipSpacingVertical="2dp">
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/btnTimeFilter"
+            style="@style/Widget.Material3.Chip.Assist"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="@string/news_time_filter_default"
+            android:textSize="12sp"
+            app:chipIcon="@drawable/ic_alarm"
+            app:chipIconSize="16dp" />
 
         <com.google.android.material.chip.Chip
             android:id="@+id/btnSource"
@@ -85,16 +49,6 @@
             android:maxWidth="200dp"
             android:text="@string/filter_keyword"
             android:textSize="12sp" />
-
-        <com.google.android.material.chip.Chip
-            android:id="@+id/btnHistory"
-            style="@style/Widget.Material3.Chip.Assist"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/history_button"
-            android:textSize="12sp"
-            app:chipIcon="@drawable/ic_history"
-            app:chipIconSize="16dp" />
     </com.google.android.material.chip.ChipGroup>
 
     <TextView

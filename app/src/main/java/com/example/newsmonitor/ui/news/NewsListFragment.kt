@@ -63,24 +63,9 @@ class NewsListFragment : Fragment() {
         binding.rvNews.layoutManager = LinearLayoutManager(requireContext())
         binding.rvNews.adapter = adapter
 
-        binding.chipLast3.isChecked = true
-        binding.timeChipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
-            if (checkedIds.size != 1) return@setOnCheckedStateChangeListener
-            val filter = when (checkedIds[0]) {
-                R.id.chipAll -> TimeFilter.All
-                R.id.chipToday -> TimeFilter.Today
-                R.id.chipLast3 -> TimeFilter.Days(3)
-                R.id.chipLast7 -> TimeFilter.Days(7)
-                R.id.chipLast30 -> TimeFilter.Days(30)
-                else -> return@setOnCheckedStateChangeListener
-            }
-            timeFilter.value = filter
-            binding.btnHistory.text = getString(R.string.history_button)
-        }
-
+        binding.btnTimeFilter.setOnClickListener { showTimeFilterMenu() }
         binding.btnSource.setOnClickListener { pickSource() }
         binding.btnKeyword.setOnClickListener { pickKeyword() }
-        binding.btnHistory.setOnClickListener { showHistoryMenu() }
         binding.btnSelectAll.setOnClickListener { toggleSelectAll() }
         binding.btnDeleteSelected.setOnClickListener { confirmDeleteSelected() }
         binding.btnExport.setOnClickListener { exportSelected() }
@@ -181,22 +166,29 @@ class NewsListFragment : Fragment() {
         dialog.show()
     }
 
-    private fun showHistoryMenu() {
-        val popup = PopupMenu(requireContext(), binding.btnHistory)
-        popup.menu.add(0, MENU_1_MONTH, 1, getString(R.string.history_1m))
-        popup.menu.add(0, MENU_3_MONTHS, 2, getString(R.string.history_3m))
-        popup.menu.add(0, MENU_6_MONTHS, 3, getString(R.string.history_6m))
-        popup.menu.add(0, MENU_1_YEAR, 4, getString(R.string.history_1y))
+    private fun showTimeFilterMenu() {
+        val options = listOf(
+            TimeFilter.Today to R.string.filter_today,
+            TimeFilter.Days(3) to R.string.filter_3days,
+            TimeFilter.Days(7) to R.string.filter_7days,
+            TimeFilter.Months(1) to R.string.history_1m,
+            TimeFilter.Months(3) to R.string.history_3m,
+            TimeFilter.Months(6) to R.string.history_6m,
+            TimeFilter.Months(12) to R.string.history_1y,
+            TimeFilter.All to R.string.filter_all
+        )
+
+        val popup = PopupMenu(requireContext(), binding.btnTimeFilter)
+        options.forEachIndexed { index, (_, titleRes) ->
+            popup.menu.add(0, index, index, getString(titleRes))
+        }
         popup.setOnMenuItemClickListener { item ->
-            val months = when (item.itemId) {
-                MENU_1_MONTH -> 1
-                MENU_3_MONTHS -> 3
-                MENU_6_MONTHS -> 6
-                else -> 12
-            }
-            binding.timeChipGroup.clearCheck()
-            timeFilter.value = TimeFilter.Months(months)
-            binding.btnHistory.text = item.title
+            val (filter, titleRes) = options[item.itemId]
+            timeFilter.value = filter
+            binding.btnTimeFilter.text = getString(
+                R.string.news_time_filter_format,
+                getString(titleRes)
+            )
             true
         }
         popup.show()
@@ -293,10 +285,4 @@ class NewsListFragment : Fragment() {
         }
     }
 
-    companion object {
-        private const val MENU_1_MONTH = 1
-        private const val MENU_3_MONTHS = 2
-        private const val MENU_6_MONTHS = 3
-        private const val MENU_1_YEAR = 4
-    }
 }
