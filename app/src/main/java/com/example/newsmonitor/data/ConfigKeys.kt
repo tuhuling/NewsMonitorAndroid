@@ -1,7 +1,6 @@
 package com.example.newsmonitor.data
 
 object ConfigKeys {
-    const val BAIDU_OCR_APP_ID = "baidu_ocr_app_id"
     const val BAIDU_OCR_API_KEY = "baidu_ocr_api_key"
     const val BAIDU_OCR_SECRET_KEY = "baidu_ocr_secret_key"
     const val BAIDU_TRANSLATE_APP_ID = "baidu_translate_app_id"
@@ -45,11 +44,10 @@ class ConfigRepository(private val dao: ConfigDao) {
     }
 
     suspend fun getBaiduOcrConfig(): BaiduOcrConfig? {
-        val appId = dao.get(ConfigKeys.BAIDU_OCR_APP_ID)?.trim().orEmpty()
         val apiKey = dao.get(ConfigKeys.BAIDU_OCR_API_KEY)?.trim().orEmpty()
         val secretKey = dao.get(ConfigKeys.BAIDU_OCR_SECRET_KEY)?.trim().orEmpty()
         return if (apiKey.isNotEmpty() && secretKey.isNotEmpty()) {
-            BaiduOcrConfig(appId, apiKey, secretKey)
+            BaiduOcrConfig(apiKey, secretKey)
         } else {
             null
         }

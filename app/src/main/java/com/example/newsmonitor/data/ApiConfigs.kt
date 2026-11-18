@@ -6,7 +6,6 @@ data class BaiduTranslateConfig(
 )
 
 data class BaiduOcrConfig(
-    val appId: String,
     val apiKey: String,
     val secretKey: String
 )

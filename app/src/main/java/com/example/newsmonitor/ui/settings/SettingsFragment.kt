@@ -71,7 +71,6 @@ class SettingsFragment : Fragment() {
             }
             if (_binding == null) return@launch
 
-            binding.etBaiduAppId.setText(values[ConfigKeys.BAIDU_OCR_APP_ID].orEmpty())
             binding.etBaiduApiKey.setText(values[ConfigKeys.BAIDU_OCR_API_KEY].orEmpty())
             binding.etBaiduSecretKey.setText(values[ConfigKeys.BAIDU_OCR_SECRET_KEY].orEmpty())
             binding.etBaiduTranslateAppId.setText(
@@ -100,7 +99,6 @@ class SettingsFragment : Fragment() {
         binding.tilInterval.error = null
 
         val entries = listOf(
-            ConfigKeys.BAIDU_OCR_APP_ID to binding.etBaiduAppId.text?.toString()?.trim().orEmpty(),
             ConfigKeys.BAIDU_OCR_API_KEY to binding.etBaiduApiKey.text?.toString()?.trim().orEmpty(),
             ConfigKeys.BAIDU_OCR_SECRET_KEY to binding.etBaiduSecretKey.text?.toString()?.trim()
                 .orEmpty(),

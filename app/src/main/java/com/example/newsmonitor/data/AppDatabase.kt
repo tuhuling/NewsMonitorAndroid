@@ -16,7 +16,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         ConfigEntry::class,
         IntelTemplate::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -50,6 +50,21 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** 将“AI生成情报”登记为关键词，并回填历史 AI 情报的关键词标签。 */
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "UPDATE `news` SET `match_keyword` = 'AI生成情报' " +
+                        "WHERE `is_ai_generated` = 1 " +
+                        "AND (`match_keyword` IS NULL OR `match_keyword` = '')"
+                )
+                db.execSQL(
+                    "INSERT OR IGNORE INTO `keywords` (`keyword`, `created_at`) " +
+                        "VALUES ('AI生成情报', '')"
+                )
+            }
+        }
+
         fun get(context: Context): AppDatabase {
             return instance ?: synchronized(this) {
                 instance ?: Room.databaseBuilder(
@@ -57,7 +72,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "news_monitor.db"
                 )
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     .fallbackToDestructiveMigration()
                     .build()
                     .also { instance = it }

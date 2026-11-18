@@ -44,6 +44,9 @@ interface KeywordDao {
     @Query("SELECT * FROM keywords ORDER BY id DESC")
     suspend fun getAll(): List<Keyword>
 
+    @Query("SELECT COUNT(*) FROM keywords WHERE keyword = :keyword")
+    suspend fun countByKeyword(keyword: String): Int
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(keyword: Keyword): Long
 

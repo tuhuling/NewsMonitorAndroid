@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.newsmonitor.data.AppDatabase
 import com.example.newsmonitor.data.ConfigRepository
+import com.example.newsmonitor.data.Keyword
 import com.example.newsmonitor.data.News
 import com.example.newsmonitor.network.DeepSeekIntelApi
 import com.example.newsmonitor.util.TimeUtils
@@ -130,12 +131,25 @@ class IntelGenerateViewModel(app: Application) : AndroidViewModel(app) {
                     contentZh = null,
                     newsUrl = null,
                     publishTime = TimeUtils.nowBeijingString(),
-                    matchKeyword = null,
+                    matchKeyword = AI_INTEL_TAG,
                     isPushed = 1,
                     createdAt = now,
                     isAiGenerated = 1
                 )
-                val savedId = withContext(Dispatchers.IO) { db.newsDao().insert(news) }
+                val savedId = withContext(Dispatchers.IO) {
+                    // 将“AI生成情报”登记为关键词，便于在新闻列表中按关键词集中筛选。
+                    if (db.keywordDao().countByKeyword(AI_INTEL_TAG) == 0) {
+                        runCatching {
+                            db.keywordDao().insert(
+                                Keyword(
+                                    keyword = AI_INTEL_TAG,
+                                    createdAt = TimeUtils.nowBeijingString()
+                                )
+                            )
+                        }
+                    }
+                    db.newsDao().insert(news)
+                }
                 tickerJob?.cancel()
                 val elapsed = SystemClock.elapsedRealtime() - startedAtElapsed
                 _state.update {
@@ -220,6 +234,7 @@ class IntelGenerateViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     companion object {
+        const val AI_INTEL_TAG = "AI生成情报"
         private val WHITESPACE = Regex("\\s+")
     }
 }

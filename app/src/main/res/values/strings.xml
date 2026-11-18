@@ -68,7 +68,6 @@
     <string name="export_logs">导出日志</string>
     <string name="no_logs">暂无日志</string>
 
-    <string name="settings_baidu_app_id">百度 OCR APP ID</string>
     <string name="settings_baidu_api_key">百度 OCR API Key</string>
     <string name="settings_baidu_secret_key">百度 OCR Secret Key</string>
     <string name="settings_dingtalk_webhook">钉钉机器人 Webhook URL</string>
@@ -107,7 +106,6 @@
     <string name="ai_intel_tag">AI生成情报</string>
     <string name="intel_detail">情报详情</string>
 
-    <string name="settings_baidu_translate_header">百度翻译（Google 翻译失败时备用）</string>
     <string name="settings_baidu_translate_app_id">百度翻译 APP ID</string>
     <string name="settings_baidu_translate_secret">百度翻译密钥</string>
     <string name="settings_intel_template_header">情报模板</string>
