@@ -25,26 +25,26 @@ data class FetchedNews(
 /**
  * 基于 OkHttp + Jsoup 的新闻抓取器。
  * 每个网站首页最多取前 10 条详情，失败重试 1 次（间隔 3 秒）。
+ * Jsoup 失败或正文过短时启用 WebView 渲染 / 百度 OCR 兜底（每站每轮最多 3 次）。
  */
 class NewsFetcher(
-    private val log: suspend (level: String, message: String) -> Unit
+    private val log: suspend (level: String, message: String) -> Unit,
+    private val fallback: CrawlerFallback? = null
 ) {
 
+    private var fallbackBudget = MAX_FALLBACK_PER_SITE
+
     suspend fun fetchNews(website: Website): List<FetchedNews> = withContext(Dispatchers.IO) {
+        fallbackBudget = MAX_FALLBACK_PER_SITE
         val document = fetchPage(website.url, "首页(${website.name})")
             ?: return@withContext emptyList()
 
-        val candidates = ArrayList<Pair<String, String>>()
-        val seen = HashSet<String>()
-        for (element in document.select(LINK_SELECTOR)) {
-            if (candidates.size >= MAX_NEWS_PER_SITE) break
-            val href = element.absUrl("href").ifBlank { element.attr("href") }
-            val title = element.text().trim().replace(WHITESPACE, " ")
-            if (href.isBlank() || title.length <= 10) continue
-            val fullUrl = resolveUrl(website.url, href) ?: continue
-            if (!fullUrl.startsWith("http://", true) && !fullUrl.startsWith("https://", true)) continue
-            if (!seen.add(fullUrl)) continue
-            candidates.add(title to fullUrl)
+        var candidates = collectCandidates(document, website.url)
+        if (candidates.isEmpty() && fallback != null) {
+            val rendered = useFallback(website.url, "首页链接")
+            if (rendered != null) {
+                candidates = collectCandidates(rendered, website.url)
+            }
         }
 
         val result = ArrayList<FetchedNews>()
@@ -58,13 +58,50 @@ class NewsFetcher(
         result
     }
 
+    private fun collectCandidates(
+        document: Document,
+        baseUrl: String
+    ): List<Pair<String, String>> {
+        val candidates = ArrayList<Pair<String, String>>()
+        val seen = HashSet<String>()
+        for (element in document.select(LINK_SELECTOR)) {
+            if (candidates.size >= MAX_NEWS_PER_SITE) break
+            val href = element.absUrl("href").ifBlank { element.attr("href") }
+            val title = element.text().trim().replace(WHITESPACE, " ")
+            if (href.isBlank() || title.length <= 10) continue
+            val fullUrl = resolveUrl(baseUrl, href) ?: continue
+            if (!fullUrl.startsWith("http://", true) &&
+                !fullUrl.startsWith("https://", true)
+            ) {
+                continue
+            }
+            if (!seen.add(fullUrl)) continue
+            candidates.add(title to fullUrl)
+        }
+        return candidates
+    }
+
     private suspend fun fetchDetail(title: String, url: String): FetchedNews? {
         val document = fetchPage(url, "详情") ?: return null
-        val rawTime = extractPublishTime(document)
-        val extracted = extractContent(document)
+        val rawTime = ContentExtractor.extractPublishTime(document)
+        var extracted = ContentExtractor.extractContent(document)
+
+        if ((extracted?.length ?: 0) < MIN_DETAIL_CONTENT && fallback != null) {
+            val rendered = useFallback(url, "详情正文")
+            if (rendered != null) {
+                val fallbackText = ContentExtractor.extractContent(rendered)
+                if (!fallbackText.isNullOrBlank() &&
+                    fallbackText.length > (extracted?.length ?: 0)
+                ) {
+                    extracted = fallbackText
+                }
+            }
+        }
+
         // 正文缺失或过短时用标题兜底；显式写成非空 String，避免可空类型推断问题。
+        val finalText = extracted
         val content: String =
-            if (extracted.isNullOrBlank() || extracted.length < 50) title else extracted
+            if (finalText.isNullOrBlank() || finalText.length < 50) title else finalText
         return FetchedNews(
             title = title,
             url = url,
@@ -106,7 +143,32 @@ class NewsFetcher(
                 }
             }
         }
+
+        if (fallback != null && fallbackBudget > 0) {
+            return useFallback(url, label)
+        }
         return null
+    }
+
+    private suspend fun useFallback(url: String, label: String): Document? {
+        val crawler = fallback ?: return null
+        if (fallbackBudget <= 0) {
+            log("WARN", "兜底次数已达上限，跳过[$label] $url")
+            return null
+        }
+        fallbackBudget--
+        return try {
+            val document = crawler.fetchDocument(url)
+            if (document == null) {
+                log("WARN", "浏览器/OCR 兜底未取得内容[$label] $url")
+            }
+            document
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log("ERROR", "兜底抓取异常[$label] $url: ${e.message?.take(120)}")
+            null
+        }
     }
 
     private fun charsetFromContentType(contentType: String?): String? {
@@ -133,71 +195,19 @@ class NewsFetcher(
         }
     }
 
-    private fun extractPublishTime(document: Document): String? {
-        for (selector in TIME_SELECTORS) {
-            val element = document.selectFirst(selector) ?: continue
-            val value = if (element.tagName().equals("meta", true)) {
-                element.attr("content")
-            } else {
-                element.attr("datetime").ifBlank { element.text() }
-            }
-            if (value.isNotBlank()) return value.trim()
-        }
-        return null
-    }
-
-    private fun extractContent(document: Document): String? {
-        document.select("script, style, nav, header, footer, aside").remove()
-
-        for (selector in CONTENT_SELECTORS) {
-            val element = document.selectFirst(selector) ?: continue
-            val text = element.text().trim()
-            if (text.length > 200) return text
-        }
-
-        val paragraphs = document.select("p")
-            .map { it.text().trim() }
-            .filter { it.length > 20 }
-            .joinToString(" ")
-        return if (paragraphs.isBlank()) null else paragraphs
-    }
-
     companion object {
         private const val MAX_NEWS_PER_SITE = 10
         private const val MAX_CONTENT_LENGTH = 3000
+        private const val MAX_FALLBACK_PER_SITE = 3
+        private const val MIN_DETAIL_CONTENT = 50
         private val WHITESPACE = Regex("\\s+")
-        private val CHARSET_PATTERN = Regex("charset\\s*=\\s*[\"']?([A-Za-z0-9_\\-]+)", RegexOption.IGNORE_CASE)
+        private val CHARSET_PATTERN =
+            Regex("charset\\s*=\\s*[\"']?([A-Za-z0-9_\\-]+)", RegexOption.IGNORE_CASE)
 
         private const val LINK_SELECTOR =
             "a[href*=\"/news/\"], a[href*=\"/article/\"], a[href*=\"/story/\"], " +
                 "a[href*=\"/post/\"], a[href*=\"/202\"], a[href*=\"/content/\"], " +
                 ".news-item a, .article-item a, .post-title a, .entry-title a, " +
                 "h2 a, h3 a, h4 a, .title a, .headline a"
-
-        private val TIME_SELECTORS = listOf(
-            "time",
-            ".publish-time",
-            ".post-date",
-            ".article-date",
-            "meta[property=\"article:published_time\"]",
-            "meta[name=\"publishdate\"]",
-            ".date",
-            ".timestamp",
-            ".entry-date"
-        )
-
-        private val CONTENT_SELECTORS = listOf(
-            "article",
-            ".article-content",
-            ".post-content",
-            ".entry-content",
-            ".content",
-            ".body",
-            ".story-body",
-            ".main-content",
-            "#content",
-            ".news-content",
-            ".detail-content"
-        )
     }
 }

@@ -68,6 +68,7 @@ class NewsListFragment : Fragment() {
         binding.btnKeyword.setOnClickListener { pickKeyword() }
         binding.btnSelectAll.setOnClickListener { toggleSelectAll() }
         binding.btnDeleteSelected.setOnClickListener { confirmDeleteSelected() }
+        binding.btnGenerateIntel.setOnClickListener { openGenerateIntelDialog() }
         binding.btnExport.setOnClickListener { exportSelected() }
 
         updateSourceButton()
@@ -240,6 +241,13 @@ class NewsListFragment : Fragment() {
                 }
             }
             .show()
+    }
+
+    private fun openGenerateIntelDialog() {
+        val ids = adapter.selectedIds().toLongArray()
+        if (ids.isEmpty()) return
+        IntelGenerateDialogFragment.newInstance(ids)
+            .show(childFragmentManager, "intel_generate")
     }
 
     private fun exportSelected() {

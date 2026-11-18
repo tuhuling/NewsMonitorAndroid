@@ -83,4 +83,37 @@
     <string name="ai_pick_hint">勾选要导入的网站</string>
     <string name="generate">生成</string>
     <string name="import_selected">导入选中项</string>
+
+    <string name="generate_intel">生成情报</string>
+    <string name="generate_intel_title">生成情报</string>
+    <string name="generate_intel_selected_count">已选择 %1$d 条新闻</string>
+    <string name="generate_intel_requirement_hint">请输入生成要求，例如：本次生成1000字，重点围绕……</string>
+    <string name="generate_intel_template_title">选择情报模板（仅可查看，不可编辑）</string>
+    <string name="generate_intel_no_template">暂未导入情报模板，请到“设置 → 情报模板”上传</string>
+    <string name="generate_intel_view_template">查看选中模板</string>
+    <string name="generate_intel_start">开始生成</string>
+    <string name="generate_intel_waiting">正在生成情报…</string>
+    <string name="generate_intel_waiting_hint">AI 正在分析素材并撰写情报，请稍候</string>
+    <string name="generate_intel_cancel">取消生成</string>
+    <string name="generate_intel_percent">%1$d%%</string>
+    <string name="generate_intel_elapsed">已用时长%1$d分%2$d秒</string>
+    <string name="generate_intel_result">生成结果</string>
+    <string name="generate_intel_view_detail">查看详情</string>
+    <string name="generate_intel_share">分享情报</string>
+    <string name="generate_intel_back">返回列表</string>
+    <string name="generate_intel_retry">重试</string>
+    <string name="generate_intel_error_back">返回</string>
+    <string name="generate_intel_meta">AI生成情报</string>
+    <string name="ai_intel_tag">AI生成情报</string>
+    <string name="intel_detail">情报详情</string>
+
+    <string name="settings_baidu_translate_header">百度翻译（Google 翻译失败时备用）</string>
+    <string name="settings_baidu_translate_app_id">百度翻译 APP ID</string>
+    <string name="settings_baidu_translate_secret">百度翻译密钥</string>
+    <string name="settings_intel_template_header">情报模板</string>
+    <string name="settings_intel_template_hint">模板仅支持查看和删除，不可编辑</string>
+    <string name="upload_template">上传模板</string>
+    <string name="no_intel_templates">暂无情报模板</string>
+    <string name="view">查看</string>
+    <string name="template_uploaded">模板已上传</string>
 </resources>

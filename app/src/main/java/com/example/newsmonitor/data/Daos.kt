@@ -122,6 +122,25 @@ interface LogDao {
 }
 
 @Dao
+interface IntelTemplateDao {
+
+    @Query("SELECT * FROM intel_templates ORDER BY created_at DESC, id DESC")
+    fun observeAll(): Flow<List<IntelTemplate>>
+
+    @Query("SELECT * FROM intel_templates ORDER BY created_at DESC, id DESC")
+    suspend fun getAll(): List<IntelTemplate>
+
+    @Query("SELECT * FROM intel_templates WHERE id = :id LIMIT 1")
+    suspend fun getById(id: Long): IntelTemplate?
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insert(template: IntelTemplate): Long
+
+    @Query("DELETE FROM intel_templates WHERE id = :id")
+    suspend fun deleteById(id: Long)
+}
+
+@Dao
 interface ConfigDao {
 
     @Query("SELECT v FROM config WHERE k = :key LIMIT 1")

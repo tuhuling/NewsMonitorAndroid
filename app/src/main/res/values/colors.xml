@@ -16,6 +16,8 @@
 
     <color name="tag_bg">#E3F2FD</color>
     <color name="tag_text">#1565C0</color>
+    <color name="ai_tag_bg">#E8F5E9</color>
+    <color name="ai_tag_text">#2E7D32</color>
     <color name="badge_bg">#E0E0E0</color>
     <color name="badge_text">#616161</color>
 

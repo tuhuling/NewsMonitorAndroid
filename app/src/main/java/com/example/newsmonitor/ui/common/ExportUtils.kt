@@ -21,10 +21,15 @@ object ExportUtils {
             .sortedByDescending { it.publishTime ?: "" }
             .forEach { news ->
                 val displayTitle = news.titleZh?.takeIf { it.isNotBlank() } ?: news.title
+                val keyword = if (news.isAiGenerated == 1) {
+                    "AI生成情报"
+                } else {
+                    news.matchKeyword ?: ""
+                }
                 builder.append(csvEscape(news.publishTime ?: "")).append(',')
                     .append(csvEscape(news.websiteName ?: "")).append(',')
                     .append(csvEscape(displayTitle)).append(',')
-                    .append(csvEscape(news.matchKeyword ?: "")).append(',')
+                    .append(csvEscape(keyword)).append(',')
                     .append(csvEscape(news.newsUrl ?: "")).append('\n')
             }
 

@@ -29,9 +29,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.nio.ByteBuffer
-import java.nio.charset.Charset
-import java.nio.charset.CodingErrorAction
+import com.example.newsmonitor.util.TextFileReader
 
 class WebsiteFragment : Fragment() {
 
@@ -370,42 +368,7 @@ class WebsiteFragment : Fragment() {
     }
 
     private fun readTextAuto(context: Context, uri: Uri): String? {
-        val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-            ?: return null
-        if (bytes.isEmpty()) return ""
-
-        if (bytes.size >= 2 && bytes[0] == 0xFF.toByte() && bytes[1] == 0xFE.toByte()) {
-            return Charset.forName("UTF-16LE")
-                .decode(ByteBuffer.wrap(bytes, 2, bytes.size - 2)).toString()
-        }
-        if (bytes.size >= 2 && bytes[0] == 0xFE.toByte() && bytes[1] == 0xFF.toByte()) {
-            return Charset.forName("UTF-16BE")
-                .decode(ByteBuffer.wrap(bytes, 2, bytes.size - 2)).toString()
-        }
-
-        var offset = 0
-        if (bytes.size >= 3 &&
-            bytes[0] == 0xEF.toByte() &&
-            bytes[1] == 0xBB.toByte() &&
-            bytes[2] == 0xBF.toByte()
-        ) {
-            offset = 3
-        }
-
-        val slice = bytes.copyOfRange(offset, bytes.size)
-        return try {
-            Charsets.UTF_8.newDecoder()
-                .onMalformedInput(CodingErrorAction.REPORT)
-                .onUnmappableCharacter(CodingErrorAction.REPORT)
-                .decode(ByteBuffer.wrap(slice))
-                .toString()
-        } catch (_: Exception) {
-            try {
-                Charset.forName("GB18030").decode(ByteBuffer.wrap(slice)).toString()
-            } catch (_: Exception) {
-                null
-            }
-        }
+        return TextFileReader.readTextAuto(context, uri)
     }
 
     override fun onDestroyView() {

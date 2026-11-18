@@ -46,13 +46,16 @@ class NewsAdapter(
             onSelectionChanged(selectedIds.toSet())
         }
 
+        val isAiGenerated = news.isAiGenerated == 1
+
         binding.tvTime.text = formatListTime(news.publishTime)
+        binding.tvSource.isVisible = !isAiGenerated
         binding.tvSource.text = news.websiteName?.takeIf { it.isNotBlank() }
             ?: context.getString(R.string.unknown_source)
         binding.tvTitle.text = news.titleZh?.takeIf { it.isNotBlank() } ?: news.title
-        binding.tvBadge.isVisible = news.titleZh.isNullOrBlank()
+        binding.tvBadge.isVisible = news.titleZh.isNullOrBlank() && !isAiGenerated
 
-        bindTags(binding.llTags, news.matchKeyword)
+        bindTags(binding.llTags, news)
         binding.root.setOnClickListener { onOpen(news) }
     }
 
@@ -70,9 +73,16 @@ class NewsAdapter(
         notifyItemRangeChanged(0, itemCount)
     }
 
-    private fun bindTags(container: LinearLayout, matchKeyword: String?) {
+    private fun bindTags(container: LinearLayout, news: News) {
         container.removeAllViews()
-        val tags = matchKeyword
+        if (news.isAiGenerated == 1) {
+            container.addView(
+                createTag(container.context, container.context.getString(R.string.ai_intel_tag), true)
+            )
+            return
+        }
+
+        val tags = news.matchKeyword
             ?.split(',')
             ?.map { it.trim() }
             ?.filter { it.isNotEmpty() }
@@ -85,12 +95,17 @@ class NewsAdapter(
         }
     }
 
-    private fun createTag(context: Context, text: String): TextView {
+    private fun createTag(context: Context, text: String, isAi: Boolean = false): TextView {
         return TextView(context).apply {
             this.text = text
             textSize = 11f
-            setTextColor(ContextCompat.getColor(context, R.color.tag_text))
-            setBackgroundResource(R.drawable.bg_tag)
+            if (isAi) {
+                setTextColor(ContextCompat.getColor(context, R.color.ai_tag_text))
+                setBackgroundResource(R.drawable.bg_tag_ai)
+            } else {
+                setTextColor(ContextCompat.getColor(context, R.color.tag_text))
+                setBackgroundResource(R.drawable.bg_tag)
+            }
             val horizontal = context.dp(5)
             val vertical = context.dp(1)
             setPadding(horizontal, vertical, horizontal, vertical)

@@ -106,7 +106,9 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="@string/select_all" />
+            android:minWidth="0dp"
+            android:text="@string/select_all"
+            android:textSize="12sp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnDeleteSelected"
@@ -114,8 +116,21 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:minWidth="0dp"
             android:text="@string/delete"
-            android:textColor="@color/level_error" />
+            android:textColor="@color/level_error"
+            android:textSize="12sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnGenerateIntel"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:minWidth="0dp"
+            android:text="@string/generate_intel"
+            android:textColor="@color/status_green"
+            android:textSize="12sp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnExport"
@@ -123,7 +138,9 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="@string/export" />
+            android:minWidth="0dp"
+            android:text="@string/export"
+            android:textSize="12sp" />
     </LinearLayout>
 
 </LinearLayout>

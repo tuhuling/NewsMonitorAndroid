@@ -48,6 +48,15 @@ data class News(
     @ColumnInfo(name = "publish_time") val publishTime: String? = null,
     @ColumnInfo(name = "match_keyword") val matchKeyword: String? = null,
     @ColumnInfo(name = "is_pushed") val isPushed: Int = 0,
+    @ColumnInfo(name = "created_at") val createdAt: Long = 0L,
+    @ColumnInfo(name = "is_ai_generated", defaultValue = "0") val isAiGenerated: Int = 0
+)
+
+@Entity(tableName = "intel_templates")
+data class IntelTemplate(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    val content: String,
     @ColumnInfo(name = "created_at") val createdAt: Long = 0L
 )
 

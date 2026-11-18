@@ -19,6 +19,7 @@ import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import com.example.newsmonitor.R
 import com.example.newsmonitor.data.AppDatabase
+import com.example.newsmonitor.data.BaiduTranslateConfig
 import com.example.newsmonitor.data.ConfigRepository
 import com.example.newsmonitor.data.LogEntry
 import com.example.newsmonitor.data.News
@@ -28,6 +29,7 @@ import com.example.newsmonitor.network.FetchedNews
 import com.example.newsmonitor.network.NewsFetcher
 import com.example.newsmonitor.network.PushResult
 import com.example.newsmonitor.network.Translator
+import com.example.newsmonitor.network.WebViewCrawlerFallback
 import com.example.newsmonitor.ui.MainActivity
 import com.example.newsmonitor.util.TimeUtils
 import kotlinx.coroutines.CancellationException
@@ -71,7 +73,14 @@ class MonitorService : Service() {
         super.onCreate()
         db = AppDatabase.get(this)
         configRepository = ConfigRepository(db.configDao())
-        newsFetcher = NewsFetcher { level, message -> writeLog(level, message) }
+        newsFetcher = NewsFetcher(
+            log = { level, message -> writeLog(level, message) },
+            fallback = WebViewCrawlerFallback(
+                context = applicationContext,
+                ocrConfigProvider = { configRepository.getBaiduOcrConfig() },
+                log = { level, message -> writeLog(level, message) }
+            )
+        )
         createNotificationChannel()
     }
 
@@ -128,6 +137,7 @@ class MonitorService : Service() {
 
         while (currentCoroutineContext().isActive && MonitorState.running.value) {
             val websites = db.websiteDao().getAll()
+            val baiduTranslate = configRepository.getBaiduTranslateConfig()
             MonitorState.setProgress(0, websites.size)
             updateNotification(0, websites.size)
             writeLog("INFO", "开始巡查，共 ${websites.size} 个网站")
@@ -151,7 +161,7 @@ class MonitorService : Service() {
                 for (item in items) {
                     if (!currentCoroutineContext().isActive || !MonitorState.running.value) break
                     try {
-                        processItem(website, item)
+                        processItem(website, item, baiduTranslate)
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
@@ -181,7 +191,11 @@ class MonitorService : Service() {
         }
     }
 
-    private suspend fun processItem(website: Website, item: FetchedNews) {
+    private suspend fun processItem(
+        website: Website,
+        item: FetchedNews,
+        baiduTranslate: BaiduTranslateConfig?
+    ) {
         val newsDao = db.newsDao()
 
         if (item.url.isNotBlank()) {
@@ -195,12 +209,12 @@ class MonitorService : Service() {
         val keywords = db.keywordDao().getAll().map { it.keyword }
         if (keywords.isEmpty()) return
 
-        val titleZh = Translator.translate(item.title)
-        val contentZh = Translator.translate(item.content)
+        val titleZh = Translator.translate(item.title, baiduTranslate)
+        val contentZh = Translator.translate(item.content, baiduTranslate)
         val translationFailed = titleZh.isNullOrBlank() || contentZh.isNullOrBlank()
 
         if (translationFailed) {
-            writeLog("WARN", "翻译失败，已保留原文：${item.title.take(50)}")
+            writeLog("WARN", "翻译失败（Google/百度均未成功），已保留原文：${item.title.take(50)}")
         }
 
         // 双重匹配：翻译后的中文 + 原文，任一路命中即算命中。
